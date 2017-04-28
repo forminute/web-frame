@@ -1,0 +1,46 @@
+#!/usr/bin/python3
+import tornado.ioloop
+import tornado.web
+import tornado.httpserver
+import sys,getopt
+
+g_path = ''
+
+class  Handler(tornado.web.RequestHandler):
+    """docstring for  MainHandler"""
+    def get(self):
+        service = __import__(g_path)
+        method = self.get_argument('method')
+        s = getattr(service, method)
+        args = {}
+        for key in self.request.arguments:
+            args[key] = self.get_argument(key)
+        result = s(args)
+        self.write(result)
+
+def usage():
+    print(' -s the script file name\n -p the server port \n -h get help information')
+
+if __name__ == '__main__':
+    opts, args = getopt.getopt(sys.argv[1:], "s:p:h")
+    py_name = ''
+    port = 30090
+    for op, value in opts:
+        if op == "-s":
+            py_name = value
+        elif op == "-p":
+            port = value
+        elif op == "-h":
+            usage()
+            sys.exit()
+    if py_name == '' :
+        print('script is needed')
+        sys.exit()
+    g_path = py_name.replace('.py','')
+    app = tornado.web.Application([
+        ('/'+g_path, Handler),
+    ], )
+
+    http_server = tornado.httpserver.HTTPServer(app)
+    http_server.listen(port)
+    tornado.ioloop.IOLoop.instance().start()
